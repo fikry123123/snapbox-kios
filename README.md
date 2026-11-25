@@ -12,6 +12,27 @@ SnapBox Kiosk is an Electron photobooth application. It guides a guest through p
 - A 25-minute session timer that starts after payment is reported successful.
 - A ZIP containing the strip image, captured photos, and GIFs, available by email or local save.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><strong>Home</strong><br><img src="screenshots/1.png" alt="SnapBox home screen" width="460"></td>
+    <td align="center"><strong>Package checkout</strong><br><img src="screenshots/2.png" alt="Package checkout screen" width="460"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Grid selection</strong><br><img src="screenshots/3.png" alt="Grid selection screen" width="460"></td>
+    <td align="center"><strong>Template selection</strong><br><img src="screenshots/4.png" alt="Template selection screen" width="460"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Photo selection</strong><br><img src="screenshots/5.png" alt="Photo selection screen" width="460"></td>
+    <td align="center"><strong>Email delivery</strong><br><img src="screenshots/6.png" alt="Email delivery screen" width="460"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Additional capture</strong><br><img src="screenshots/7.png" alt="Additional SnapBox screen capture" width="460"></td>
+    <td></td>
+  </tr>
+</table>
+
 ## Requirements
 
 - Node.js and npm
