@@ -1,0 +1,17 @@
+{
+  "name": "snapbox-kiosk",
+  "version": "2.5.0",
+  "description": "SnapBox Photobooth Kiosk Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "jszip": "^3.10.1",
+    "nodemailer": "^10.6.1"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SnapBox Kiosk Studio v2.5</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "tertiary-fixed": "#62fae3",
+            "on-error": "#ffffff",
+            "secondary-fixed-dim": "#ffb2b7",
+            "primary-fixed-dim": "#c4c1fb",
+            "secondary-container": "#ff5d73",
+            "surface": "#fbf9f6",
+            "on-tertiary-fixed": "#00201c",
+            "on-primary-container": "#8683ba",
+            "tertiary-fixed-dim": "#3cddc7",
+            "primary": "#070235",
+            "outline-variant": "#c8c5d0",
+            "on-secondary-container": "#64001a",
+            "on-tertiary-fixed-variant": "#005047",
+            "primary-container": "#1e1b4b",
+            "tertiary-container": "#002722",
+            "on-secondary": "#ffffff",
+            "background": "#fbf9f6",
+            "on-surface-variant": "#47464f",
+            "tertiary": "#000e0b",
+            "surface-container": "#efeeeb",
+            "on-surface": "#1b1c1a",
+            "surface-container-low": "#f5f3f0",
+            "on-primary": "#ffffff",
+            "primary-fixed": "#e3dfff",
+            "outline": "#787680",
+            "on-secondary-fixed-variant": "#91002a",
+            "on-primary-fixed": "#181445",
+            "surface-variant": "#e4e2df",
+            "on-secondary-fixed": "#40000e",
+            "surface-container-lowest": "#ffffff",
+            "secondary-fixed": "#ffdadb",
+            "surface-container-high": "#eae8e5",
+            "surface-container-highest": "#e4e2df",
+            "secondary": "#b42440"
+          },
+          fontFamily: {
+            display: ["Space Grotesk", "sans-serif"],
+            body: ["Plus Jakarta Sans", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; user-select: none; font-family: 'Plus Jakarta Sans', sans-serif; }
+    h1, h2, h3, .font-headline { font-family: 'Space Grotesk', sans-serif; }
+    ::-webkit-scrollbar { display: none; }
+    .filter-glow { filter: contrast(1.05) brightness(1.05) saturate(1.1); }
+    .filter-bw { filter: grayscale(1) contrast(1.25) brightness(0.95); }
+    .filter-peach { filter: sepia(0.35) hue-rotate(-15deg) saturate(1.25) brightness(1.05); }
+    .filter-vintage { filter: contrast(1.15) sepia(0.2) brightness(0.9) saturate(0.85); }
+    @keyframes print-feed {
+      from { transform: translateY(-18px); }
+      to { transform: translateY(28px); }
+    }
+    @keyframes print-pulse {
+      0%, 100% { opacity: 0.45; }
+      50% { opacity: 1; }
+    }
+    .print-feed-animation { animation: print-feed 1.4s ease-in-out infinite alternate; }
+    .print-pulse-animation { animation: print-pulse 1.2s ease-in-out infinite; }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased h-screen flex flex-col">
+
+  <!-- GLOBAL TOP HEADER -->
+  <header id="main-header" class="hidden fixed top-0 left-0 w-full z-40 bg-surface-container-lowest/95 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+    <div class="h-20 w-full px-10 flex items-center justify-between gap-6">
+      <div class="shrink-0" aria-label="Logo SnapBox" title="SnapBox">
+        <div class="w-10 h-10 bg-primary text-on-primary rounded-xl flex items-center justify-center shadow-[3px_3px_0px_#1e1b4b]">
+          <span class="material-symbols-outlined text-[24px]">photo_camera</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4 shrink-0">
+        <div class="relative">
+          <button id="session-timer-button" onclick="toggleSessionTimerDetails()" aria-expanded="false" aria-controls="session-timer-details" type="button" class="flex items-center gap-2 bg-surface-container-high px-4 py-1.5 rounded-full hover:bg-surface-container-highest transition-colors">
+            <span class="material-symbols-outlined text-secondary text-[20px]">timer</span>
+            <span id="global-timer" class="font-headline text-lg font-bold text-primary">25:00</span>
+          </button>
+          <div id="session-timer-details" class="hidden absolute top-full right-0 mt-3 w-80 rounded-2xl bg-surface-container-lowest p-4 shadow-xl border border-outline-variant">
+            <p class="font-bold text-primary">Hitung mundur sesi</p>
+            <p class="text-xs text-on-surface-variant mt-1">Waktu berjalan sejak kamu memulai sesi.</p>
+            <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+              <div class="rounded-lg bg-surface-container-low p-2">
+                <span id="session-timer-minutes" class="block font-headline text-2xl font-bold text-primary">25</span>
+                <span class="text-[10px] font-bold uppercase text-on-surface-variant">Menit</span>
+              </div>
+              <div class="rounded-lg bg-surface-container-low p-2">
+                <span id="session-timer-seconds" class="block font-headline text-2xl font-bold text-primary">00</span>
+                <span class="text-[10px] font-bold uppercase text-on-surface-variant">Detik</span>
+              </div>
+              <div class="rounded-lg bg-surface-container-low p-2">
+                <span id="session-timer-milliseconds" class="block font-headline text-2xl font-bold text-primary">000</span>
+                <span class="text-[10px] font-bold uppercase text-on-surface-variant">Milidetik</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button onclick="toggleHelpModal(true)" class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-secondary-container text-on-secondary-container text-sm font-bold hover:bg-secondary hover:text-on-secondary transition-colors" type="button">
+          <span class="material-symbols-outlined text-[18px]">help</span>
+          <span>Bantuan</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== STEP 0: WELCOME SCREEN ==================== -->
+  <section id="step-0" class="step-view w-full h-screen flex flex-col justify-between p-10 relative overflow-hidden">
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-secondary-fixed/50 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="absolute top-1/2 -right-36 w-[30rem] h-[30rem] bg-tertiary-fixed/40 rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+    <div class="w-full flex items-center justify-between z-20">
+      <div class="flex items-center gap-3">
+        <div class="w-14 h-14 bg-primary text-on-primary rounded-xl flex items-center justify-center shadow-[4px_4px_0px_#1e1b4b]">
+          <span class="material-symbols-outlined text-[32px]">photo_camera</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-headline text-3xl text-primary font-black uppercase">SnapBox</span>
+            <span class="bg-secondary-container text-on-secondary px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-[2px_2px_0px_#1e1b4b]">STUDIO</span>
+          </div>
+          <p class="text-sm text-on-surface-variant flex items-center gap-1.5">
+            <span class="inline-block w-2.5 h-2.5 bg-tertiary-fixed-dim rounded-full animate-ping"></span>
+            Kiosk #04 • Grand Indonesia Mall
+          </p>
+        </div>
+      </div>
+
+      <button id="audio-toggle-btn" onclick="toggleAudioGuide()" class="h-14 px-4 bg-surface-container-lowest text-primary rounded-xl flex items-center gap-2 text-sm font-bold shadow-[4px_4px_0px_#1e1b4b] active:translate-y-1 transition-all">
+        <span id="audio-icon" class="material-symbols-outlined text-[24px]">volume_up</span>
+        <span id="audio-text">Panduan Suara ON</span>
+      </button>
+    </div>
+
+    <div class="flex-1 flex flex-col items-center justify-center text-center max-w-2xl mx-auto z-10">
+      <div class="inline-flex items-center gap-2 bg-surface-container-high px-4 py-1.5 rounded-full mb-4 shadow-[2px_2px_0px_#1e1b4b]">
+        <span class="w-3 h-3 rounded-full bg-secondary-container animate-pulse"></span>
+        <span class="text-sm text-primary font-bold uppercase tracking-wide">10x Sesi Jepret + Retake 2x</span>
+      </div>
+
+      <h1 class="font-headline text-6xl text-primary font-black uppercase tracking-tight leading-none mb-4">
+        Abadikan Momen <br />
+        <span class="text-secondary">Paling Seru!</span>
+      </h1>
+
+      <p class="text-xl text-on-surface-variant font-medium max-w-lg mb-8">
+        Ambil 10 gaya foto otomatis, bebas ulang pose favoritmu, dan dapatkan semua foto RAW serta animasi GIF!
+      </p>
+
+      <button onclick="goToStep(1)" class="group inline-flex items-center justify-center gap-4 bg-secondary-container text-on-secondary px-10 py-6 rounded-full font-headline text-2xl uppercase tracking-wider shadow-[6px_6px_0px_#1e1b4b] hover:-translate-y-1 active:translate-y-1 transition-all">
+        <span class="w-14 h-14 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center shadow-[2px_2px_0px_#1e1b4b] group-hover:rotate-12 transition-transform">
+          <span class="material-symbols-outlined text-[36px]">camera</span>
+        </span>
+        <span class="font-black">Mulai Foto Sekarang</span>
+        <span class="material-symbols-outlined text-[32px] group-hover:translate-x-2 transition-transform">arrow_forward</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ==================== STEP 1: PILIH PAKET & VOUCHER ==================== -->
+  <section id="step-1" class="step-view hidden flex-1 pt-24 pb-16 px-10 flex flex-col justify-between h-screen">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-on-primary font-headline font-bold shadow-[2px_2px_0px_#1E1B4B]">1</span>
+        <div>
+          <h1 class="font-headline text-2xl font-bold text-primary">Pilih Paket & Checkout</h1>
+          <p class="text-sm text-on-surface-variant">Setiap sesi mendapatkan 10x foto + 2x kesempatan ulang per foto</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 bg-tertiary-fixed/30 text-on-tertiary-fixed px-4 py-1.5 rounded-full">
+        <span class="material-symbols-outlined text-[18px]">verified</span>
+        <span class="text-xs font-bold uppercase tracking-wider">Gratis 10 RAW + GIF</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-6 flex-1 min-h-0">
+      <div class="col-span-7 flex flex-col justify-between gap-4">
+        <div class="grid grid-cols-3 gap-4 flex-1">
+          <!-- Paket 1 -->
+          <div onclick="selectPackage(this)" data-package="classic" data-name="Classic 2-Strip" data-price="35000" data-base-copies="2" class="package-card relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-lowest shadow-[4px_4px_0px_#1E1B4B] cursor-pointer ring-4 ring-secondary-container">
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-secondary-container text-on-primary px-3 py-0.5 rounded-full text-xs font-bold shadow-[2px_2px_0px_#1E1B4B]">TERPOPULER</div>
+            <div>
+              <div class="flex items-center justify-between mt-1">
+                <span class="text-secondary text-xs uppercase font-bold">2x6 Photostrip</span>
+                <div class="check-icon w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-on-secondary"><span class="material-symbols-outlined text-[16px]">check</span></div>
+              </div>
+              <h2 class="font-headline text-xl font-bold text-primary mt-1">Classic 2-Strip</h2>
+              <p class="text-xs text-on-surface-variant">2 lembar strip cetak fisik</p>
+            </div>
+            <div class="flex flex-1 items-center justify-center gap-3 py-4" aria-label="Preview dua photostrip">
+              <div class="w-12 h-32 rounded-md bg-primary p-1.5 flex flex-col gap-1 shadow-md">
+                <span class="text-[6px] text-white text-center font-bold">SNAPBOX</span>
+                <span class="flex-1 rounded-sm bg-white/40"></span><span class="flex-1 rounded-sm bg-white/40"></span>
+                <span class="flex-1 rounded-sm bg-white/40"></span><span class="flex-1 rounded-sm bg-white/40"></span>
+              </div>
+              <div class="w-12 h-32 rounded-md bg-primary p-1.5 flex flex-col gap-1 shadow-md">
+                <span class="text-[6px] text-white text-center font-bold">SNAPBOX</span>
+                <span class="flex-1 rounded-sm bg-white/40"></span><span class="flex-1 rounded-sm bg-white/40"></span>
+                <span class="flex-1 rounded-sm bg-white/40"></span><span class="flex-1 rounded-sm bg-white/40"></span>
+              </div>
+            </div>
+            <div>
+              <p class="text-xs text-on-surface-variant mb-2">• 10x Sesi Jepret (Retake 2x)<br>• Pilih 4 Foto Terbaik<br>• Semua foto RAW + GIF</p>
+              <div class="bg-surface-container-high/50 rounded-lg px-3 py-1.5 flex justify-between items-center">
+                <span class="text-xs text-on-surface-variant">Tarif</span>
+                <span class="font-headline text-lg font-bold text-primary">Rp 35.000</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paket 2 -->
+          <div onclick="selectPackage(this)" data-package="wide" data-name="Wide Multi-Grid" data-price="45000" data-base-copies="2" class="package-card relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-lowest shadow-[4px_4px_0px_#1E1B4B] cursor-pointer">
+            <div>
+              <div class="flex items-center justify-between mt-1">
+                <span class="text-on-surface-variant text-xs uppercase font-bold">4x6 Postcard</span>
+                <div class="check-icon w-6 h-6 rounded-full bg-surface-container-high flex items-center justify-center text-outline-variant"><span class="material-symbols-outlined text-[16px]">check</span></div>
+              </div>
+              <h2 class="font-headline text-xl font-bold text-primary mt-1">Wide Multi-Grid</h2>
+              <p class="text-xs text-on-surface-variant">2 lembar lebar 4x6 inci</p>
+            </div>
+            <div class="flex flex-1 items-center justify-center py-4" aria-label="Preview postcard grid enam foto">
+              <div class="w-36 h-28 rounded-lg bg-white border-4 border-primary p-2 grid grid-cols-3 grid-rows-2 gap-1 shadow-md">
+                <span class="rounded-sm bg-primary/20"></span><span class="rounded-sm bg-primary/30"></span><span class="rounded-sm bg-primary/20"></span>
+                <span class="rounded-sm bg-primary/30"></span><span class="rounded-sm bg-primary/20"></span><span class="rounded-sm bg-primary/30"></span>
+              </div>
+            </div>
+            <div>
+              <p class="text-xs text-on-surface-variant mb-2">• 10x Sesi Jepret (Retake 2x)<br>• Grid Lebar + Foto Digital<br>• Animasi Boomerang GIF</p>
+              <div class="bg-surface-container-high/50 rounded-lg px-3 py-1.5 flex justify-between items-center">
+                <span class="text-xs text-on-surface-variant">Tarif</span>
+                <span class="font-headline text-lg font-bold text-primary">Rp 45.000</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paket 3 -->
+          <div onclick="selectPackage(this)" data-package="party" data-name="Party Big Pack" data-price="65000" data-base-copies="4" class="package-card relative flex flex-col justify-between p-4 rounded-xl bg-surface-container-lowest shadow-[4px_4px_0px_#1E1B4B] cursor-pointer">
+            <div class="absolute -top-3 right-3 bg-tertiary-fixed text-on-tertiary-fixed px-3 py-0.5 rounded-full text-xs font-bold shadow-[2px_2px_0px_#1E1B4B]">VALUE PACK</div>
+            <div>
+              <div class="flex items-center justify-between mt-1">
+                <span class="text-on-surface-variant text-xs uppercase font-bold">4 Lembar + Digital</span>
+                <div class="check-icon w-6 h-6 rounded-full bg-surface-container-high flex items-center justify-center text-outline-variant"><span class="material-symbols-outlined text-[16px]">check</span></div>
+              </div>
+              <h2 class="font-headline text-xl font-bold text-primary mt-1">Party Big Pack</h2>
+              <p class="text-xs text-on-surface-variant">4 lembar cetak fisik langsung</p>
+            </div>
+            <div class="flex flex-1 items-center justify-center py-4" aria-label="Preview empat hasil cetak">
+              <div class="grid grid-cols-2 gap-2">
+                <div class="w-14 h-16 rounded-md bg-primary p-1.5 grid grid-cols-2 grid-rows-2 gap-1 shadow-md">
+                  <span class="rounded-sm bg-white/40"></span><span class="rounded-sm bg-white/40"></span><span class="rounded-sm bg-white/40"></span><span class="rounded-sm bg-white/40"></span>
+                </div>
+                <div class="w-14 h-16 rounded-md bg-secondary-fixed p-1.5 grid grid-cols-2 grid-rows-2 gap-1 shadow-md">
+                  <span class="rounded-sm bg-primary/20"></span><span class="rounded-sm bg-primary/20"></span><span class="rounded-sm bg-primary/20"></span><span class="rounded-sm bg-primary/20"></span>
+                </div>
+                <div class="w-14 h-16 rounded-md bg-secondary-fixed p-1.5 grid grid-cols-2 grid-rows-2 gap-1 shadow-md">
+                  <span class="rounded-sm bg-primary/20"></span><span class="rounded-sm bg-primary/20"></span><span class="rounded-sm bg-primary/20"></span><span class="rounded-sm bg-primary/20"></span>
+                </div>
+                <div class="w-14 h-16 rounded-md bg-primary p-1.5 grid grid-cols-2 grid-rows-2 gap-1 shadow-md">
+                  <span class="rounded-sm bg-white/40"></span><span class="rounded-sm bg-white/40"></span><span class="rounded-sm bg-white/40"></span><span class="rounded-sm bg-white/40"></span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p class="text-xs text-on-surface-variant mb-2">• 10x Sesi Jepret (Retake 2x)<br>• 4 Lembar Fisik + Foto Digital<br>• Semua RAW & GIF</p>
+              <div class="bg-surface-container-high/50 rounded-lg px-3 py-1.5 flex justify-between items-center">
+                <span class="text-xs text-on-surface-variant">Tarif</span>
+                <span class="font-headline text-lg font-bold text-primary">Rp 65.000</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tambah Salinan -->
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-[4px_4px_0px_#1E1B4B] flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-tertiary-fixed/30 flex items-center justify-center text-on-tertiary-fixed shadow-[2px_2px_0px_#1E1B4B]">
+              <span class="material-symbols-outlined text-[28px]">copy_all</span>
+            </div>
+            <div>
+              <h3 class="font-headline text-lg font-bold text-primary">Cetak Lembar Tambahan</h3>
+              <p class="text-xs text-on-surface-variant">+Rp 10.000 per salinan ekstra</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <button onclick="updateQty(-1)" class="w-12 h-12 rounded-xl bg-surface-container-high text-primary font-headline text-2xl font-bold shadow-[3px_3px_0px_#1E1B4B]">-</button>
+            <div class="w-14 text-center">
+              <span id="qty-display" class="font-headline text-3xl font-bold text-primary">0</span>
+              <span class="block text-[10px] font-bold uppercase text-on-surface-variant">Salinan</span>
+            </div>
+            <button onclick="updateQty(1)" class="w-12 h-12 rounded-xl bg-primary text-on-primary font-headline text-2xl font-bold shadow-[3px_3px_0px_#1E1B4B]">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kanan: Voucher & Ringkasan -->
+      <div class="col-span-5 flex flex-col justify-between gap-4">
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-[4px_4px_0px_#1E1B4B] flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold text-primary uppercase">Kupon Promo</span>
+            <div class="flex gap-1.5">
+              <button onclick="quickApplyVoucher('SNAP10')" class="px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed text-xs font-bold shadow-[1px_1px_0px_#1E1B4B]">SNAP10 (-10k)</button>
+              <button onclick="quickApplyVoucher('WEEKEND5')" class="px-2.5 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed text-xs font-bold shadow-[1px_1px_0px_#1E1B4B]">WEEKEND5 (-5k)</button>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <div class="flex-1 bg-surface-container-low rounded-lg px-3 py-2 flex items-center justify-between">
+              <span id="voucher-input" class="font-headline text-lg font-bold text-primary tracking-widest min-h-[28px]"></span>
+              <span id="voucher-badge" class="hidden px-2 py-0.5 rounded bg-tertiary-fixed text-on-tertiary-fixed text-xs font-bold">HEMAT</span>
+            </div>
+            <button onclick="applyVoucher()" class="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-bold shadow-[3px_3px_0px_#1E1B4B]">Terapkan</button>
+          </div>
+          <div class="grid grid-cols-10 gap-1.5 mt-1">
+            <button type="button" onclick="voucherKeyPress('1')" class="h-8 rounded bg-surface-container-high font-bold text-primary">1</button>
+            <button type="button" onclick="voucherKeyPress('2')" class="h-8 rounded bg-surface-container-high font-bold text-primary">2</button>
+            <button type="button" onclick="voucherKeyPress('3')" class="h-8 rounded bg-surface-container-high font-bold text-primary">3</button>
+            <button type="button" onclick="voucherKeyPress('4')" class="h-8 rounded bg-surface-container-high font-bold text-primary">4</button>
+            <button type="button" onclick="voucherKeyPress('5')" class="h-8 rounded bg-surface-container-high font-bold text-primary">5</button>
+            <button type="button" onclick="voucherKeyPress('6')" class="h-8 rounded bg-surface-container-high font-bold text-primary">6</button>
+            <button type="button" onclick="voucherKeyPress('7')" class="h-8 rounded bg-surface-container-high font-bold text-primary">7</button>
+            <button type="button" onclick="voucherKeyPress('8')" class="h-8 rounded bg-surface-container-high font-bold text-primary">8</button>
+            <button type="button" onclick="voucherKeyPress('9')" class="h-8 rounded bg-surface-container-high font-bold text-primary">9</button>
+            <button type="button" onclick="voucherKeyPress('0')" class="h-8 rounded bg-surface-container-high font-bold text-primary">0</button>
+            <button type="button" onclick="voucherKeyPress('Q')" class="h-8 rounded bg-surface-container-high font-bold text-primary">Q</button>
+            <button type="button" onclick="voucherKeyPress('W')" class="h-8 rounded bg-surface-container-high font-bold text-primary">W</button>
+            <button type="button" onclick="voucherKeyPress('E')" class="h-8 rounded bg-surface-container-high font-bold text-primary">E</button>
+            <button type="button" onclick="voucherKeyPress('R')" class="h-8 rounded bg-surface-container-high font-bold text-primary">R</button>
+            <button type="button" onclick="voucherKeyPress('T')" class="h-8 rounded bg-surface-container-high font-bold text-primary">T</button>
+            <button type="button" onclick="voucherKeyPress('Y')" class="h-8 rounded bg-surface-container-high font-bold text-primary">Y</button>
+            <button type="button" onclick="voucherKeyPress('U')" class="h-8 rounded bg-surface-container-high font-bold text-primary">U</button>
+            <button type="button" onclick="voucherKeyPress('I')" class="h-8 rounded bg-surface-container-high font-bold text-primary">I</button>
+            <button type="button" onclick="voucherKeyPress('O')" class="h-8 rounded bg-surface-container-high font-bold text-primary">O</button>
+            <button type="button" onclick="voucherKeyPress('P')" class="h-8 rounded bg-surface-container-high font-bold text-primary">P</button>
+            <button type="button" onclick="voucherKeyPress('A')" class="h-8 rounded bg-surface-container-high font-bold text-primary">A</button>
+            <button type="button" onclick="voucherKeyPress('S')" class="h-8 rounded bg-surface-container-high font-bold text-primary">S</button>
+            <button type="button" onclick="voucherKeyPress('D')" class="h-8 rounded bg-surface-container-high font-bold text-primary">D</button>
+            <button type="button" onclick="voucherKeyPress('F')" class="h-8 rounded bg-surface-container-high font-bold text-primary">F</button>
+            <button type="button" onclick="voucherKeyPress('G')" class="h-8 rounded bg-surface-container-high font-bold text-primary">G</button>
+            <button type="button" onclick="voucherKeyPress('H')" class="h-8 rounded bg-surface-container-high font-bold text-primary">H</button>
+            <button type="button" onclick="voucherKeyPress('J')" class="h-8 rounded bg-surface-container-high font-bold text-primary">J</button>
+            <button type="button" onclick="voucherKeyPress('K')" class="h-8 rounded bg-surface-container-high font-bold text-primary">K</button>
+            <button type="button" onclick="voucherKeyPress('L')" class="h-8 rounded bg-surface-container-high font-bold text-primary">L</button>
+            <button type="button" onclick="voucherKeyPress('Z')" class="h-8 rounded bg-surface-container-high font-bold text-primary">Z</button>
+            <button type="button" onclick="voucherKeyPress('X')" class="h-8 rounded bg-surface-container-high font-bold text-primary">X</button>
+            <button type="button" onclick="voucherKeyPress('C')" class="h-8 rounded bg-surface-container-high font-bold text-primary">C</button>
+            <button type="button" onclick="voucherKeyPress('V')" class="h-8 rounded bg-surface-container-high font-bold text-primary">V</button>
+            <button type="button" onclick="voucherKeyPress('B')" class="h-8 rounded bg-surface-container-high font-bold text-primary">B</button>
+            <button type="button" onclick="voucherKeyPress('N')" class="h-8 rounded bg-surface-container-high font-bold text-primary">N</button>
+            <button type="button" onclick="voucherKeyPress('M')" class="h-8 rounded bg-surface-container-high font-bold text-primary">M</button>
+            <button type="button" onclick="voucherBackspace()" aria-label="Hapus karakter terakhir" class="col-span-2 h-8 rounded bg-secondary-fixed-dim text-on-secondary-fixed flex items-center justify-center">
+              <span class="material-symbols-outlined text-[18px]">backspace</span>
+            </button>
+            <button type="button" onclick="clearVoucher()" aria-label="Kosongkan voucher" class="h-8 rounded bg-secondary-fixed-dim text-on-secondary-fixed flex items-center justify-center">
+              <span class="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-[4px_4px_0px_#1E1B4B] flex flex-col justify-between flex-1">
+          <div class="space-y-1 text-sm">
+            <div class="flex justify-between"><span id="summary-pkg-name">Paket Classic 2-Strip</span><span id="summary-pkg-price" class="font-semibold">Rp 35.000</span></div>
+            <div class="flex justify-between text-on-surface-variant"><span>Cetak Tambahan (<span id="summary-qty">0</span>x)</span><span id="summary-extra-price" class="font-semibold">Rp 0</span></div>
+            <div id="summary-discount-row" class="hidden justify-between text-secondary font-semibold"><span>Voucher Diskon</span><span id="summary-discount-val">- Rp 0</span></div>
+          </div>
+          <div class="bg-surface-container-low rounded-lg p-3 flex items-center justify-between mt-2">
+            <div>
+              <span class="text-xs uppercase font-bold text-on-surface-variant block">Total Pembayaran</span>
+              <span class="text-[11px] text-tertiary-container">Termasuk PPN 11%</span>
+            </div>
+            <span id="total-price-display" class="font-headline text-3xl font-bold text-primary">Rp 35.000</span>
+          </div>
+        </div>
+
+        <button onclick="goToStep(2)" class="w-full h-16 rounded-xl bg-secondary-container text-on-primary font-headline text-xl font-bold flex items-center justify-center gap-3 shadow-[5px_5px_0px_#1E1B4B]">
+          <span>Lanjut Pembayaran QRIS</span>
+          <span class="material-symbols-outlined text-[24px]">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== STEP 2: PEMBAYARAN QRIS ==================== -->
+  <section id="step-2" class="step-view hidden flex-1 pt-24 pb-16 px-10 flex flex-col justify-between h-screen">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-3">
+        <div class="bg-secondary-container text-on-secondary-container px-4 py-1.5 rounded-full font-bold text-sm">Langkah 2 dari 7</div>
+        <h2 class="font-headline text-2xl font-bold text-primary">Pembayaran QRIS Instan</h2>
+      </div>
+      <button onclick="goToStep(1)" class="px-4 py-2 rounded-xl bg-surface-container-high font-bold text-sm text-primary">← Ubah Paket</button>
+    </div>
+
+    <div class="grid grid-cols-12 gap-6 flex-1 min-h-0 items-center">
+      <div class="col-span-4 bg-surface-container-lowest rounded-xl p-6 shadow-xl flex flex-col justify-between h-full max-h-[480px]">
+        <div>
+          <span class="bg-primary text-on-primary text-xs font-bold px-3 py-1 rounded-full uppercase">Tagihan Kiosk</span>
+          <h3 id="qris-pkg-title" class="font-headline text-2xl font-bold text-primary mt-4">Classic 2-Strip</h3>
+          <p id="qris-copies-info" class="text-sm text-on-surface-variant mt-1">Total 2 Lembar Cetak Fisik + Foto Digital</p>
+        </div>
+        <div class="bg-surface-container p-4 rounded-xl">
+          <span class="text-xs uppercase font-bold text-on-surface-variant block">Nominal Scan QRIS</span>
+          <span id="qris-amount-display" class="font-headline text-4xl font-bold text-secondary font-mono">Rp 35.000</span>
+        </div>
+      </div>
+
+      <div class="col-span-5 bg-surface-container-lowest rounded-xl p-6 shadow-xl flex flex-col items-center justify-between h-full max-h-[480px]">
+        <div class="w-full flex items-center justify-between bg-secondary p-3 rounded-lg text-on-secondary">
+          <span class="font-headline text-lg font-bold">QRIS</span>
+          <span class="text-xs font-bold uppercase bg-white/20 px-2 py-0.5 rounded">STANDAR NASIONAL</span>
+        </div>
+        <div class="p-4 bg-white rounded-xl shadow-md border-2 border-primary/10">
+          <svg class="w-48 h-48 text-primary" fill="currentColor" viewBox="0 0 100 100">
+            <rect height="26" rx="2" width="26" x="5" y="5"></rect>
+            <rect fill="white" height="20" rx="1" width="20" x="8" y="8"></rect>
+            <rect height="14" rx="1" width="14" x="11" y="11"></rect>
+            <rect height="26" rx="2" width="26" x="69" y="5"></rect>
+            <rect fill="white" height="20" rx="1" width="20" x="72" y="8"></rect>
+            <rect height="14" rx="1" width="14" x="75" y="11"></rect>
+            <rect height="26" rx="2" width="26" x="5" y="69"></rect>
+            <rect fill="white" height="20" rx="1" width="20" x="8" y="72"></rect>
+            <rect height="14" rx="1" width="14" x="11" y="75"></rect>
+            <rect fill="#FF5D73" height="24" rx="4" width="24" x="38" y="38"></rect>
+            <rect height="12" width="12" x="40" y="10"></rect>
+            <rect height="12" width="12" x="10" y="42"></rect>
+            <rect height="12" width="12" x="72" y="42"></rect>
+            <rect height="14" width="14" x="72" y="72"></rect>
+          </svg>
+        </div>
+        <div class="flex items-center gap-2 bg-surface-container-high px-4 py-1.5 rounded-full">
+          <span class="w-2.5 h-2.5 rounded-full bg-secondary animate-ping"></span>
+          <span class="text-sm font-semibold text-primary">Menunggu pembayaran otomatis...</span>
+        </div>
+      </div>
+
+      <div class="col-span-3 flex flex-col justify-between h-full max-h-[480px]">
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-xl">
+          <span class="text-xs font-bold uppercase text-primary block mb-2">E-Wallet & Mobile Banking</span>
+          <div class="grid grid-cols-2 gap-2 text-xs font-bold text-primary text-center">
+            <div class="bg-surface-container-low p-2 rounded">GoPay</div>
+            <div class="bg-surface-container-low p-2 rounded">OVO</div>
+            <div class="bg-surface-container-low p-2 rounded">DANA</div>
+            <div class="bg-surface-container-low p-2 rounded">ShopeePay</div>
+          </div>
+        </div>
+        <div class="bg-tertiary-fixed/30 rounded-xl p-4 shadow-md">
+          <span class="text-xs font-bold uppercase text-on-tertiary-fixed block mb-1">Simulasi Pembayaran</span>
+          <button onclick="simulateQRISSuccess()" class="w-full bg-primary text-on-primary py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-md">
+            <span class="material-symbols-outlined text-tertiary-fixed">check_circle</span>
+            <span>Simulasi Bayar Berhasil</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== STEP 3: PILIH TEMPLATE STRIP ==================== -->
+  <section id="step-3" class="step-view hidden flex-1 pt-24 pb-16 px-10 flex flex-col justify-between h-screen">
+    <div id="grid-choice-view" class="h-full min-h-0 flex flex-col gap-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="font-headline text-2xl font-bold text-primary">1. Pilih Susunan Grid</h2>
+          <p class="text-sm text-on-surface-variant">Tentukan susunan grid dulu. Jumlah foto mengikuti template yang tersedia untuk paket.</p>
+        </div>
+        <span class="bg-primary text-on-primary px-4 py-2 rounded-full text-sm font-bold">LANGKAH 1 DARI 2</span>
+      </div>
+
+      <div class="grid grid-cols-3 gap-5 flex-1 min-h-0">
+        <button id="grid-option-horizontal" type="button" onclick="selectGridLayout('horizontal')" aria-pressed="false" class="text-left p-5 rounded-2xl bg-surface-container-lowest shadow-[4px_4px_0px_#1E1B4B] border-2 border-transparent transition-all">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold uppercase text-secondary">Grid horizontal</span>
+              <h3 class="font-headline text-2xl font-bold text-primary mt-1">1 Baris Mendatar</h3>
+              <p class="text-sm text-on-surface-variant mt-1">Semua foto tersusun menyamping.</p>
+            </div>
+            <span class="material-symbols-outlined text-4xl text-primary">view_week</span>
+          </div>
+          <div class="mt-8 bg-surface-container-low rounded-xl p-4">
+            <div id="grid-preview-horizontal" class="grid gap-2 h-28" aria-hidden="true"></div>
+            <p id="grid-preview-label-horizontal" class="text-xs text-center text-on-surface-variant mt-3"></p>
+          </div>
+        </button>
+
+        <button id="grid-option-vertical" type="button" onclick="selectGridLayout('vertical')" aria-pressed="false" class="text-left p-5 rounded-2xl bg-surface-container-lowest shadow-[4px_4px_0px_#1E1B4B] border-2 border-transparent transition-all">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold uppercase text-secondary">Grid vertikal</span>
+              <h3 class="font-headline text-2xl font-bold text-primary mt-1">Menjalar ke Bawah</h3>
+              <p class="text-sm text-on-surface-variant mt-1">Semua foto tersusun satu kolom.</p>
+            </div>
+            <span class="material-symbols-outlined text-4xl text-primary">view_agenda</span>
+          </div>
+          <div class="mt-8 bg-surface-container-low rounded-xl p-4">
+            <div id="grid-preview-vertical" class="grid gap-1.5 h-28 max-w-24 mx-auto" aria-hidden="true"></div>
+            <p id="grid-preview-label-vertical" class="text-xs text-center text-on-surface-variant mt-3"></p>
+          </div>
+        </button>
+
+        <button id="grid-option-two-rows" type="button" onclick="selectGridLayout('two-rows')" aria-pressed="false" class="text-left p-5 rounded-2xl bg-surface-container-lowest shadow-[4px_4px_0px_#1E1B4B] border-2 border-transparent transition-all">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold uppercase text-secondary">Grid bertumpuk</span>
+              <h3 class="font-headline text-2xl font-bold text-primary mt-1">2 Baris</h3>
+              <p class="text-sm text-on-surface-variant mt-1">Foto dibagi rata menjadi dua deret.</p>
+            </div>
+            <span class="material-symbols-outlined text-4xl text-primary">grid_view</span>
+          </div>
+          <div class="mt-8 bg-surface-container-low rounded-xl p-4">
+            <div id="grid-preview-two-rows" class="grid gap-2 h-28" aria-hidden="true"></div>
+            <p id="grid-preview-label-two-rows" class="text-xs text-center text-on-surface-variant mt-3"></p>
+          </div>
+        </button>
+      </div>
+
+      <div class="flex justify-end">
+        <button id="continue-to-template-button" type="button" onclick="continueToTemplateSelection()" disabled class="h-14 px-8 rounded-xl bg-secondary-container text-on-secondary font-headline text-lg font-bold flex items-center justify-center gap-3 shadow-[4px_4px_0px_#1E1B4B] disabled:opacity-50 disabled:cursor-not-allowed">
+          <span>Lanjut Pilih Template</span>
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="template-choice-view" class="hidden grid grid-cols-12 gap-6 h-full min-h-0">
+      <div class="col-span-7 flex flex-col h-full bg-surface-container-lowest rounded-xl shadow-[4px_4px_0px_#1E1B4B] p-5">
+        <div class="flex items-center justify-between pb-3">
+          <div>
+            <h2 class="font-headline text-2xl font-bold text-primary">2. Pilih Desain Template</h2>
+            <p class="text-xs text-on-surface-variant">Pilih tampilan frame untuk susunan grid yang sudah dipilih.</p>
+            <p id="template-package-summary" class="text-[11px] font-bold text-secondary mt-1">Classic 2-Strip • 3 template sesuai paket</p>
+          </div>
+          <button type="button" onclick="backToGridSelection()" class="px-3 py-2 rounded-lg bg-surface-container-high text-primary text-xs font-bold flex items-center gap-1">
+            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+            Kembali Pilih Grid
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 flex-1 overflow-y-auto pr-1">
+          <div onclick="selectTemplate(this)" data-id="classic-black" data-name="Classic Black (4 Pose)" data-slots="4" data-bg="#070235" data-text="#ffffff" data-accent="#62fae3" class="template-card p-4 rounded-xl bg-surface-container-low cursor-pointer shadow-[4px_4px_0px_#1E1B4B] flex flex-col justify-between">
+            <div class="h-24 rounded-lg bg-primary flex items-center justify-center text-on-primary font-mono text-xs">CLASSIC DARK • 4 SLOT</div>
+            <div class="mt-2">
+              <h3 class="font-headline text-lg font-bold text-primary">Classic Black (4 Pose)</h3>
+              <p class="text-xs text-on-surface-variant">Strip klasik 4 foto dengan stempel waktu retro.</p>
+            </div>
+          </div>
+
+          <div onclick="selectTemplate(this)" data-id="blossom-pink" data-name="Pastel Blossom (4 Pose)" data-slots="4" data-bg="#ffdadb" data-text="#40000e" data-accent="#b42440" class="template-card p-4 rounded-xl bg-surface-container-low cursor-pointer shadow-[4px_4px_0px_#1E1B4B] flex flex-col justify-between">
+            <div class="h-24 rounded-lg bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-bold text-sm">🌸 BLOSSOM PINK • 4 SLOT</div>
+            <div class="mt-2">
+              <h3 class="font-headline text-lg font-bold text-primary">Pastel Blossom (4 Pose)</h3>
+              <p class="text-xs text-on-surface-variant">Nuansa merah muda lembut gaya studio Korea.</p>
+            </div>
+          </div>
+
+          <div onclick="selectTemplate(this)" data-id="cyber-y2k" data-name="Cyber Y2K (6 Pose Grid)" data-slots="6" data-bg="#e3dfff" data-text="#181445" data-accent="#1e1b4b" class="template-card p-4 rounded-xl bg-surface-container-low cursor-pointer shadow-[4px_4px_0px_#1E1B4B] flex flex-col justify-between">
+            <div class="h-24 rounded-lg bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-mono font-bold text-sm">⚡ CYBER GRID • 6 SLOT</div>
+            <div class="mt-2">
+              <h3 class="font-headline text-lg font-bold text-primary">Cyber Y2K (6 Pose Grid)</h3>
+              <p class="text-xs text-on-surface-variant">Enam foto dalam grid yang dipilih.</p>
+            </div>
+          </div>
+
+          <div onclick="selectTemplate(this)" data-id="cloud-white" data-name="Clean Cloud White (4 Pose)" data-slots="4" data-bg="#ffffff" data-text="#070235" data-accent="#ff5d73" class="template-card p-4 rounded-xl bg-surface-container-low cursor-pointer shadow-[4px_4px_0px_#1E1B4B] flex flex-col justify-between">
+            <div class="h-24 rounded-lg bg-white border border-outline-variant flex items-center justify-center text-primary font-bold text-sm">CLOUD WHITE • 4 SLOT</div>
+            <div class="mt-2">
+              <h3 class="font-headline text-lg font-bold text-primary">Clean Cloud White</h3>
+              <p class="text-xs text-on-surface-variant">Frame putih bersih minimalis menonjolkan ekspresi.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-span-5 flex flex-col justify-between bg-surface-container-lowest rounded-xl shadow-[4px_4px_0px_#1E1B4B] p-5">
+        <div class="flex items-center justify-between">
+          <span class="font-headline text-xl font-bold text-primary">Preview Template</span>
+          <span id="tpl-preview-badge" class="text-xs font-bold bg-primary text-on-primary px-3 py-1 rounded-full">Contoh grid • 2 baris</span>
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold text-primary">Grid terpilih</p>
+            <p id="tpl-selected-grid-label" class="text-[11px] text-on-surface-variant">2 baris • 2 foto per baris</p>
+          </div>
+          <span class="text-xs text-on-surface-variant">Preview langsung berubah</span>
+        </div>
+
+        <div class="flex-1 bg-surface-container-low rounded-xl my-3 flex items-center justify-center p-4">
+          <div id="tpl-mockup-box" class="w-48 h-72 rounded-lg p-2.5 flex flex-col justify-between shadow-[4px_4px_0px_#1E1B4B] transition-colors" style="background-color: #e3dfff; color: #181445;">
+            <span class="font-mono text-[9px] text-center tracking-widest">SNAPBOX STUDIO</span>
+            <div id="tpl-mockup-slots" class="grid grid-cols-2 grid-rows-2 gap-1 flex-1 my-2">
+              <div class="bg-white/20 rounded-sm flex items-center justify-center text-[9px]">#1</div>
+              <div class="bg-white/20 rounded-sm flex items-center justify-center text-[9px]">#2</div>
+              <div class="bg-white/20 rounded-sm flex items-center justify-center text-[9px]">#3</div>
+              <div class="bg-white/20 rounded-sm flex items-center justify-center text-[9px]">#4</div>
+            </div>
+            <span class="font-mono text-[8px] text-center opacity-80">2026 • BOOTH #04</span>
+          </div>
+        </div>
+
+        <button id="btn-start-photo-session" onclick="readyAndStartPhotoSession()" disabled class="w-full h-16 rounded-xl bg-secondary-container text-on-secondary font-headline text-xl font-bold flex items-center justify-center gap-3 shadow-[5px_5px_0px_#1E1B4B] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+          <span class="material-symbols-outlined text-[28px]">photo_camera</span>
+          <span>Siap Ambil Foto</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== STEP 4: FULL-SCREEN CAMERA + AUTO 5s COUNTDOWN + RETAKE 2X ==================== -->
+  <section id="step-4" class="step-view hidden flex-1 pt-24 pb-16 px-10 flex flex-col justify-between h-screen">
+    <!-- Top Info Bar -->
+    <div class="flex items-center justify-between pb-3">
+      <div class="flex items-center gap-3">
+        <div class="bg-primary text-on-primary px-4 py-1.5 rounded-full font-headline font-bold flex items-center gap-2 shadow-[3px_3px_0px_#1e1b4b]">
+          <span class="material-symbols-outlined text-tertiary-fixed">photo_camera</span>
+          <span id="shot-progress-label">Foto ke-1 dari 10</span>
+        </div>
+        <span id="camera-status-text" class="text-sm font-semibold text-on-surface-variant">Kamera HD Aktif • Hitung mundur otomatis berjalan</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="bg-secondary-fixed text-on-secondary-fixed px-4 py-1.5 rounded-full text-xs font-bold">
+          Kesempatan Ulang Foto Ini: <strong id="retake-remaining-label">2x</strong>
+        </span>
+        <div class="flex items-center gap-2 bg-surface-container-lowest px-4 py-1.5 rounded-full shadow-sm">
+          <span class="w-3 h-3 rounded-full bg-secondary animate-ping"></span>
+          <span class="text-xs font-bold text-primary">AUTO 5 DETIK</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL WIDTH CAMERA AREA (TANPA SIDEBAR & TANPA PREVIEW GRID) -->
+    <div class="w-full flex-1 min-h-0 relative">
+      <div id="flash-overlay" class="absolute inset-0 bg-white z-50 opacity-0 pointer-events-none transition-opacity duration-150 rounded-2xl"></div>
+
+      <div class="relative w-full h-full rounded-2xl overflow-hidden bg-primary-container shadow-[6px_6px_0px_#1e1b4b] flex items-center justify-center">
+        <!-- Live Webcam Full -->
+        <video id="webcam-video" autoplay playsinline muted class="w-full h-full object-cover scale-x-[-1]"></video>
+
+        <!-- Viewfinder Sudut -->
+        <div class="absolute inset-0 pointer-events-none flex flex-col justify-between p-6">
+          <div class="flex justify-between">
+            <div class="w-10 h-10 border-t-4 border-l-4 border-white/80 rounded-tl-md"></div>
+            <div class="w-10 h-10 border-t-4 border-r-4 border-white/80 rounded-tr-md"></div>
+          </div>
+          <div class="flex justify-between">
+            <div class="w-10 h-10 border-b-4 border-l-4 border-white/80 rounded-bl-md"></div>
+            <div class="w-10 h-10 border-b-4 border-r-4 border-white/80 rounded-br-md"></div>
+          </div>
+        </div>
+
+        <!-- Countdown 5 Detik Besar di Tengah Kamera -->
+        <div id="countdown-overlay" class="hidden absolute z-20 flex flex-col items-center justify-center pointer-events-none">
+          <div class="w-48 h-48 rounded-full bg-white/95 shadow-2xl flex flex-col items-center justify-center border-8 border-secondary-container">
+            <span id="countdown-number" class="font-headline text-8xl font-black text-secondary-container leading-none">5</span>
+            <span class="text-xs font-bold text-primary uppercase mt-1 tracking-widest">Bersiap!</span>
+          </div>
+        </div>
+
+        <!-- LAYAR KONFIRMASI JEPRETAN LANGSUNG + TOMBOL ULANGI MAKS 2X -->
+        <div id="shot-review-overlay" class="hidden absolute inset-0 z-30 bg-primary/95 backdrop-blur-md flex flex-col items-center justify-between p-6">
+          <div class="w-full max-w-4xl flex items-center justify-between text-white">
+            <span class="font-headline text-xl font-bold">Hasil Foto ke-<span id="review-shot-num">1</span> dari 10</span>
+            <span class="text-sm bg-white/20 px-4 py-1.5 rounded-full">Otomatis lanjut dalam <strong id="review-auto-sec">4</strong> detik</span>
+          </div>
+
+          <div class="flex-1 my-4 flex items-center justify-center overflow-hidden rounded-xl border-4 border-white shadow-2xl">
+            <img id="review-shot-img" class="h-full w-auto object-contain" alt="Hasil Jepretan" />
+          </div>
+
+          <div class="w-full max-w-4xl grid grid-cols-2 gap-6">
+            <button id="btn-retake-shot" onclick="retakeCurrentPhoto()" class="h-16 rounded-xl bg-secondary-container text-white font-headline text-lg font-bold flex items-center justify-center gap-3 shadow-[4px_4px_0px_#ffffff] disabled:opacity-40 disabled:cursor-not-allowed">
+              <span class="material-symbols-outlined text-[24px]">replay</span>
+              <span id="btn-retake-text">Ulangi Foto Ini (Sisa 2x)</span>
+            </button>
+            <button onclick="confirmAndProceedNextShot()" class="h-16 rounded-xl bg-tertiary-fixed text-on-tertiary-fixed font-headline text-lg font-bold flex items-center justify-center gap-3 shadow-[4px_4px_0px_#ffffff]">
+              <span>Oke, Lanjut Foto Berikutnya</span>
+              <span class="material-symbols-outlined text-[24px]">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== STEP 5: PILIH FOTO + DUAL PREVIEW (PREVIEW FOTO SATUAN & PREVIEW STRIP) ==================== -->
+  <section id="step-5" class="step-view hidden flex-1 pt-24 pb-12 px-8 flex flex-col justify-between h-screen">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="font-headline text-2xl font-bold text-primary">Pilih <span id="required-slots-title">4</span> Foto Terbaik untuk Strip</h1>
+        <p class="text-xs text-on-surface-variant">Strip dimulai kosong. Klik foto untuk mengisi slot berikutnya; pilih slot terisi untuk mengganti atau menukar foto.</p>
+      </div>
+
+      <!-- Filter Selector -->
+      <div class="flex items-center gap-2 bg-surface-container-low p-1.5 rounded-full">
+        <button onclick="setGlobalFilter('glow', this)" class="filter-tab px-4 py-1.5 rounded-full text-xs font-bold bg-primary-container text-on-primary">Natural Glow</button>
+        <button onclick="setGlobalFilter('bw', this)" class="filter-tab px-4 py-1.5 rounded-full text-xs font-bold text-on-surface-variant">B&W Analog</button>
+        <button onclick="setGlobalFilter('peach', this)" class="filter-tab px-4 py-1.5 rounded-full text-xs font-bold text-on-surface-variant">Warm Peach</button>
+        <button onclick="setGlobalFilter('vintage', this)" class="filter-tab px-4 py-1.5 rounded-full text-xs font-bold text-on-surface-variant">Vintage Grain</button>
+      </div>
+
+      <div class="bg-secondary-fixed text-on-secondary-fixed px-4 py-1.5 rounded-full font-bold text-sm">
+        <span id="selection-counter">4/4 Terpilih</span>
+      </div>
+    </div>
+
+    <!-- 3 KOLOM: KIRI (10 KANDIDAT) | TENGAH (PREVIEW FOTO SATUAN) | KANAN (PREVIEW STRIP) -->
+    <div class="grid grid-cols-12 gap-4 flex-1 min-h-0 my-3">
+      
+      <!-- Kolom Kiri (5 Kolom): Daftar 10 Foto Hasil Pemotretan -->
+      <div class="col-span-4 bg-surface-container-low rounded-xl p-3 flex flex-col overflow-y-auto">
+        <div class="flex items-center justify-between mb-2 px-1">
+          <span class="text-xs font-bold uppercase text-primary">10 Hasil Pemotretan</span>
+          <span class="text-[11px] text-on-surface-variant">Klik foto untuk menambahkan</span>
+        </div>
+        <div id="candidate-grid" class="grid grid-cols-2 grid-rows-5 gap-2.5 flex-1 min-h-0">
+          <!-- 10 Foto diisi via JS -->
+        </div>
+      </div>
+
+      <!-- Kolom Tengah (4 Kolom): PREVIEW 1 - PREVIEW FOTO TERSEBUT (SATUAN BESAR) -->
+      <div class="col-span-4 bg-surface-container-lowest rounded-xl p-4 shadow-[4px_4px_0px_#1E1B4B] flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase text-secondary">Preview Foto #<span id="single-preview-number">1</span></span>
+          <span id="single-preview-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed">Masuk Strip (#1)</span>
+        </div>
+        <p id="active-strip-slot-label" class="mt-2 text-[11px] font-bold text-primary">Slot tujuan #1 • kosong</p>
+
+        <div class="flex-1 my-3 bg-surface-container-low rounded-xl overflow-hidden flex items-center justify-center relative border-2 border-primary/10">
+          <img id="single-photo-preview-img" class="w-full h-full object-contain filter-glow" alt="Preview Foto Satuan" />
+        </div>
+
+        <p id="selection-action-hint" class="w-full min-h-12 rounded-xl bg-surface-container-high px-3 py-2 text-center text-xs font-bold text-primary flex items-center justify-center" aria-live="polite">
+          Klik foto untuk mengisi Slot #1.
+        </p>
+      </div>
+
+      <!-- Kolom Kanan (3 Kolom): PREVIEW 2 - PREVIEW HASIL STRIP FOTO -->
+      <div class="col-span-4 min-h-0 bg-surface-container rounded-xl p-3 flex flex-col items-center shadow-[4px_4px_0px_#1E1B4B]">
+        <div class="w-full shrink-0 flex items-center justify-between">
+          <span class="text-xs font-bold uppercase text-primary">Preview Strip Cetak</span>
+          <button type="button" onclick="toggleStripPreview(true)" class="flex items-center gap-1 px-2 py-1 rounded-lg bg-surface-container-high text-primary text-[10px] font-bold" aria-label="Perbesar preview strip">
+            <span class="material-symbols-outlined text-[16px]">zoom_in</span>
+            Perbesar
+          </button>
+        </div>
+        <div class="w-full flex-1 min-h-0 py-2 flex items-center justify-center overflow-hidden">
+          <canvas id="final-strip-canvas" class="max-h-full max-w-full w-auto rounded-lg shadow-xl"></canvas>
+        </div>
+        <div class="w-full shrink-0 mb-2">
+          <p id="strip-slot-selector-hint" class="text-[10px] text-on-surface-variant mb-1">Klik foto untuk mengisi slot kosong berikutnya.</p>
+          <div id="strip-slot-selector" class="grid gap-1"></div>
+        </div>
+        <button id="proceed-to-delivery-button" onclick="proceedToDelivery()" disabled class="w-full h-12 shrink-0 rounded-xl bg-secondary-container text-on-secondary font-headline text-base font-bold flex items-center justify-center gap-2 shadow-[4px_4px_0px_#1E1B4B] disabled:opacity-50 disabled:cursor-not-allowed">
+          <span>Cetak Sekarang</span>
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== STEP 6: ANIMASI PROSES CETAK ==================== -->
+  <section id="step-6" class="step-view hidden flex-1 pt-24 pb-16 px-10 flex flex-col justify-between h-screen">
+    <div class="flex-1 flex items-center justify-center">
+      <div class="w-full max-w-2xl bg-surface-container-lowest rounded-3xl p-12 shadow-xl text-center">
+        <div class="relative w-48 h-40 mx-auto mb-8">
+          <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-48 h-24 rounded-2xl bg-primary shadow-[6px_6px_0px_#1e1b4b] flex items-center justify-center">
+            <span class="material-symbols-outlined text-white text-6xl">print</span>
+          </div>
+          <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-24 bg-surface-container-high rounded-t-xl border-4 border-primary overflow-hidden">
+            <div class="print-feed-animation w-20 h-24 mx-auto bg-white border-x-2 border-outline-variant shadow-md"></div>
+          </div>
+          <div class="absolute bottom-5 left-1/2 -translate-x-1/2 w-28 h-1.5 rounded-full bg-secondary-container print-pulse-animation"></div>
+        </div>
+        <h2 class="font-headline text-3xl font-bold text-primary">Sedang mencetak foto kamu...</h2>
+        <p class="text-on-surface-variant mt-3">Tunggu sebentar, foto dan paket digital sedang disiapkan.</p>
+        <p class="mt-6 text-sm font-bold text-secondary">Printer: <span id="printer-status-label">Menyiapkan cetak...</span></p>
+        <div class="mt-6">
+          <div class="flex items-center justify-between text-xs font-bold text-on-surface-variant mb-2">
+            <span id="print-progress-label">Menunggu printer...</span>
+            <span id="print-progress-value">0%</span>
+          </div>
+          <div role="progressbar" aria-label="Progres cetak" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+            <div id="print-progress-bar" class="h-full w-0 bg-secondary-container rounded-full transition-[width] duration-300 ease-out"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== STEP 7: MASUKAN EMAIL & AKHIRI SESI ==================== -->
+  <section id="step-7" class="step-view hidden flex-1 pt-24 pb-16 px-10 flex items-center justify-center h-screen">
+    <div class="w-full max-w-5xl bg-surface-container-lowest rounded-2xl p-8 shadow-xl grid grid-cols-12 gap-8">
+      <div class="col-span-5 flex flex-col items-center justify-center text-center">
+        <div id="delivery-result-badge" class="w-16 h-16 rounded-full bg-tertiary-fixed/40 text-on-tertiary-fixed flex items-center justify-center mb-5">
+          <span id="delivery-result-icon" class="material-symbols-outlined text-4xl">check</span>
+        </div>
+        <h2 id="delivery-result-title" class="font-headline text-3xl font-bold text-primary">Proses cetak selesai!</h2>
+        <p id="delivery-result-message" class="text-sm text-on-surface-variant mt-2">Ambil hasil cetak di dispenser, lalu masukkan email untuk menerima foto digital.</p>
+        <div class="flex items-end justify-center gap-4 mt-5">
+          <img id="final-output-preview" class="max-h-64 max-w-[190px] rounded-lg shadow-lg border border-outline-variant" alt="Final Photostrip" />
+          <div class="w-32">
+            <p class="text-[11px] font-bold text-secondary mb-2">Preview animasi</p>
+            <div class="aspect-[4/3] rounded-lg overflow-hidden border-2 border-primary bg-black">
+              <img id="live-gif-preview" class="w-full h-full object-contain" alt="Animasi Semua Foto" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-span-7 flex flex-col justify-center">
+        <h3 class="font-headline text-3xl font-bold text-primary">Masukkan email kamu</h3>
+        <p class="text-sm text-on-surface-variant mt-2 mb-6">Strip, hasil foto, dan GIF tersedia dalam satu paket ZIP untuk dikirim lewat email atau disimpan ke perangkat.</p>
+        <div class="space-y-3">
+          <input id="customer-email-input" type="email" inputmode="none" autocomplete="email" spellcheck="false" oninput="clearEmailFeedback()" placeholder="nama@email.com" class="w-full bg-surface-container-low rounded-xl px-4 py-3 font-headline text-base text-primary outline-none border-2 border-transparent focus:border-primary" />
+          <div class="grid grid-cols-10 gap-1.5" aria-label="Keyboard virtual email">
+            <button type="button" onclick="emailKeyPress('1')" class="h-9 rounded bg-surface-container-high font-bold text-primary">1</button>
+            <button type="button" onclick="emailKeyPress('2')" class="h-9 rounded bg-surface-container-high font-bold text-primary">2</button>
+            <button type="button" onclick="emailKeyPress('3')" class="h-9 rounded bg-surface-container-high font-bold text-primary">3</button>
+            <button type="button" onclick="emailKeyPress('4')" class="h-9 rounded bg-surface-container-high font-bold text-primary">4</button>
+            <button type="button" onclick="emailKeyPress('5')" class="h-9 rounded bg-surface-container-high font-bold text-primary">5</button>
+            <button type="button" onclick="emailKeyPress('6')" class="h-9 rounded bg-surface-container-high font-bold text-primary">6</button>
+            <button type="button" onclick="emailKeyPress('7')" class="h-9 rounded bg-surface-container-high font-bold text-primary">7</button>
+            <button type="button" onclick="emailKeyPress('8')" class="h-9 rounded bg-surface-container-high font-bold text-primary">8</button>
+            <button type="button" onclick="emailKeyPress('9')" class="h-9 rounded bg-surface-container-high font-bold text-primary">9</button>
+            <button type="button" onclick="emailKeyPress('0')" class="h-9 rounded bg-surface-container-high font-bold text-primary">0</button>
+            <button type="button" onclick="emailKeyPress('q')" class="h-9 rounded bg-surface-container-high font-bold text-primary">Q</button>
+            <button type="button" onclick="emailKeyPress('w')" class="h-9 rounded bg-surface-container-high font-bold text-primary">W</button>
+            <button type="button" onclick="emailKeyPress('e')" class="h-9 rounded bg-surface-container-high font-bold text-primary">E</button>
+            <button type="button" onclick="emailKeyPress('r')" class="h-9 rounded bg-surface-container-high font-bold text-primary">R</button>
+            <button type="button" onclick="emailKeyPress('t')" class="h-9 rounded bg-surface-container-high font-bold text-primary">T</button>
+            <button type="button" onclick="emailKeyPress('y')" class="h-9 rounded bg-surface-container-high font-bold text-primary">Y</button>
+            <button type="button" onclick="emailKeyPress('u')" class="h-9 rounded bg-surface-container-high font-bold text-primary">U</button>
+            <button type="button" onclick="emailKeyPress('i')" class="h-9 rounded bg-surface-container-high font-bold text-primary">I</button>
+            <button type="button" onclick="emailKeyPress('o')" class="h-9 rounded bg-surface-container-high font-bold text-primary">O</button>
+            <button type="button" onclick="emailKeyPress('p')" class="h-9 rounded bg-surface-container-high font-bold text-primary">P</button>
+            <button type="button" onclick="emailKeyPress('a')" class="h-9 rounded bg-surface-container-high font-bold text-primary">A</button>
+            <button type="button" onclick="emailKeyPress('s')" class="h-9 rounded bg-surface-container-high font-bold text-primary">S</button>
+            <button type="button" onclick="emailKeyPress('d')" class="h-9 rounded bg-surface-container-high font-bold text-primary">D</button>
+            <button type="button" onclick="emailKeyPress('f')" class="h-9 rounded bg-surface-container-high font-bold text-primary">F</button>
+            <button type="button" onclick="emailKeyPress('g')" class="h-9 rounded bg-surface-container-high font-bold text-primary">G</button>
+            <button type="button" onclick="emailKeyPress('h')" class="h-9 rounded bg-surface-container-high font-bold text-primary">H</button>
+            <button type="button" onclick="emailKeyPress('j')" class="h-9 rounded bg-surface-container-high font-bold text-primary">J</button>
+            <button type="button" onclick="emailKeyPress('k')" class="h-9 rounded bg-surface-container-high font-bold text-primary">K</button>
+            <button type="button" onclick="emailKeyPress('l')" class="h-9 rounded bg-surface-container-high font-bold text-primary">L</button>
+            <button type="button" onclick="emailKeyPress('@')" class="h-9 rounded bg-secondary-fixed text-on-secondary-fixed font-bold">@</button>
+            <button type="button" onclick="emailKeyPress('z')" class="h-9 rounded bg-surface-container-high font-bold text-primary">Z</button>
+            <button type="button" onclick="emailKeyPress('x')" class="h-9 rounded bg-surface-container-high font-bold text-primary">X</button>
+            <button type="button" onclick="emailKeyPress('c')" class="h-9 rounded bg-surface-container-high font-bold text-primary">C</button>
+            <button type="button" onclick="emailKeyPress('v')" class="h-9 rounded bg-surface-container-high font-bold text-primary">V</button>
+            <button type="button" onclick="emailKeyPress('b')" class="h-9 rounded bg-surface-container-high font-bold text-primary">B</button>
+            <button type="button" onclick="emailKeyPress('n')" class="h-9 rounded bg-surface-container-high font-bold text-primary">N</button>
+            <button type="button" onclick="emailKeyPress('m')" class="h-9 rounded bg-surface-container-high font-bold text-primary">M</button>
+            <button type="button" onclick="emailKeyPress('.')" class="h-9 rounded bg-secondary-fixed text-on-secondary-fixed font-bold">.</button>
+            <button type="button" onclick="emailKeyPress('_')" class="h-9 rounded bg-secondary-fixed text-on-secondary-fixed font-bold">_</button>
+            <button type="button" onclick="emailKeyPress('-')" class="h-9 rounded bg-secondary-fixed text-on-secondary-fixed font-bold">-</button>
+            <button type="button" onclick="emailKeyPress('+')" class="h-9 rounded bg-secondary-fixed text-on-secondary-fixed font-bold">+</button>
+            <button type="button" onclick="emailBackspace()" aria-label="Hapus karakter terakhir" class="col-span-2 h-9 rounded bg-secondary-fixed-dim text-on-secondary-fixed flex items-center justify-center">
+              <span class="material-symbols-outlined text-[18px]">backspace</span>
+            </button>
+            <button type="button" onclick="clearEmail()" aria-label="Kosongkan email" class="col-span-2 h-9 rounded bg-secondary-fixed-dim text-on-secondary-fixed flex items-center justify-center">
+              <span class="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+          </div>
+          <button id="send-email-button" type="button" onclick="sendPhotosToEmail()" class="w-full py-3 rounded-xl bg-secondary-container text-on-secondary font-bold shadow-[3px_3px_0px_#1E1B4B] disabled:opacity-50 disabled:cursor-not-allowed">
+            Kirim Foto ke Email
+          </button>
+          <button id="download-photos-button" type="button" onclick="downloadPhotosLocally()" class="w-full py-3 rounded-xl bg-surface-container-high text-primary font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+            Unduh Paket Foto (ZIP)
+          </button>
+          <p id="email-feedback-msg" class="hidden text-xs font-bold p-2.5 rounded-lg" role="status" aria-live="polite"></p>
+        </div>
+
+        <button onclick="resetAllAndRestart()" class="w-full mt-3 py-3 rounded-xl bg-surface-container-high text-primary font-bold">
+            Selesai & Sesi Baru →
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GLOBAL FOOTER -->
+  <footer id="main-footer" class="hidden fixed bottom-0 left-0 w-full bg-surface-container-lowest/90 backdrop-blur-md py-2.5 px-10 border-t border-surface-container-high z-30">
+    <div class="flex items-center justify-between text-xs text-on-surface-variant">
+      <div class="flex items-center gap-3">
+        <span class="w-2.5 h-2.5 rounded-full bg-tertiary-container inline-block"></span>
+        <span class="font-bold text-on-surface">Booth #04 - Mall Grand Indonesia</span>
+        <span>|</span>
+        <span>Sesi ID: <strong class="text-primary font-mono">SBX-88219</strong></span>
+      </div>
+      <div class="flex items-center gap-6">
+        <span>Total Sesi: <strong>10 Foto (Retake Maks 2x)</strong></span>
+        <span>Kamera HD Ready</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL PREVIEW STRIP -->
+  <div id="strip-preview-modal" class="hidden fixed inset-0 z-50 bg-primary/80 backdrop-blur-sm p-5 flex items-center justify-center">
+    <div class="w-full h-full max-w-6xl rounded-2xl bg-surface-container-lowest p-4 flex flex-col items-center">
+      <div class="w-full flex items-center justify-between mb-3">
+        <h3 class="font-headline text-xl font-bold text-primary">Preview Strip Cetak</h3>
+        <button type="button" onclick="toggleStripPreview(false)" class="px-4 py-2 rounded-lg bg-surface-container-high text-primary font-bold">Tutup</button>
+      </div>
+      <div class="flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden">
+        <img id="strip-preview-modal-image" class="max-h-full max-w-full object-contain rounded-lg shadow-xl" alt="Preview strip ukuran besar" />
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BANTUAN -->
+  <div id="help-modal" class="hidden fixed inset-0 z-50 bg-primary/60 backdrop-blur-sm flex items-center justify-center p-6">
+    <div class="bg-surface-container-lowest max-w-xl w-full max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-headline text-xl font-bold text-primary">Bantuan Kiosk SnapBox</h3>
+        <button type="button" onclick="toggleHelpModal(false)" aria-label="Tutup bantuan" class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center">✕</button>
+      </div>
+      <p class="text-sm text-on-surface-variant mb-4">Timer 25 menit mulai setelah pembayaran berhasil diverifikasi. Tekan timer di bagian atas untuk melihat sisa menit, detik, dan milidetik.</p>
+      <ol class="text-sm text-on-surface-variant space-y-3 mb-5 list-decimal pl-5">
+        <li>Pilih paket, selesaikan pembayaran, lalu tunggu status berhasil.</li>
+        <li>Pilih susunan grid, kemudian template yang tersedia untuk paket. Gunakan tombol kembali jika ingin mengubah grid.</li>
+        <li>Ambil 10 foto otomatis. Setiap pose bisa diulang maksimal 2 kali.</li>
+        <li>Strip dimulai kosong. Ketuk foto untuk mengisi slot berikutnya; jumlah pilihan terlihat di bagian atas. Setelah penuh, pilih slot pada preview strip lalu ketuk foto untuk mengganti. Foto yang sudah dipakai bisa ditukar posisinya.</li>
+        <li>Pilih filter dan periksa preview strip. Tombol cetak aktif setelah semua slot terisi. Ketuk Perbesar untuk melihat preview ukuran besar.</li>
+        <li>Masukkan email dengan keyboard virtual untuk mengirim ZIP, atau unduh paket foto langsung ke perangkat. Tunggu konfirmasi sebelum memulai sesi baru.</li>
+      </ol>
+      <button onclick="toggleHelpModal(false)" class="w-full py-3 rounded-xl bg-primary text-on-primary font-bold">Mengerti</button>
+    </div>
+  </div>
+
+  <canvas id="capture-canvas" class="hidden"></canvas>
+
+  <script src="app.js"></script>
+</body>
+</html>
